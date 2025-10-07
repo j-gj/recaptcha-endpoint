@@ -5,7 +5,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { captchaToken, ...formData } = req.body;
+  const { captchaToken, formType, ...formData } = req.body;
 
   if (!captchaToken) {
     return res.status(400).json({ error: 'Missing captcha token' });
@@ -51,9 +51,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         score: captchaResult.score 
       });
     }
-
+    let zapier_url = ""
+    if (formType === "contact") {
+        zapier_url = process.env.ZAPIER_WEBHOOK_URL_CONTACT!
+    } else {
+        zapier_url = process.env.ZAPIER_WEBHOOK_URL_WEBINAR!
+    }
     // Forward to Zapier
-    const zapierResponse = await fetch(process.env.ZAPIER_WEBHOOK_URL!, {
+    const zapierResponse = await fetch(zapier_url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
