@@ -1,24 +1,59 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+
+const ALLOWED_ORIGINS = [
+  'https://juliahub.com',
+  'https://www.juliahub.com',
+  'https://juliahub.framer.website',
+];
+
 // Set up CORS headers
-function setCorsHeaders(res: VercelResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*'); 
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
+  const origin = req.headers.origin;
+  let allowedOrigin: string | null = null;
+
+  if (origin) {
+    // 1. Check for exact match against the list
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      allowedOrigin = origin;
+    } 
+    // 2. Check for the specific Framer preview/development URL pattern
+    else if (origin.startsWith('https://free-chart-986234') && origin.endsWith('.framer.app')) {
+      allowedOrigin = origin;
+    }
+  }
+
+  if (allowedOrigin) {
+    // Set the specific allowed origin (not '*')
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin); 
+    // The rest of the headers remain constant for preflight
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
 
   // Handle preflight (OPTIONS) request
   if (req.method === 'OPTIONS') {
-    // Respond successfully to the preflight check
-    return res.status(200).end();
+    // If the allowed origin was set above, the necessary headers are present.
+    // Respond successfully to the preflight check.
+    if (res.hasHeader('Access-Control-Allow-Origin')) {
+        return res.status(200).end();
+    } else {
+        // If the origin is not allowed, respond with a 403 Forbidden.
+        return res.status(403).json({ error: 'Origin not allowed' });
+    }
   }
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!res.hasHeader('Access-Control-Allow-Origin')) {
+    return res.status(403).json({ error: 'Forbidden: Origin check failed' });
   }
 
   const { captchaToken, formType, ...formData } = req.body;
