@@ -44,15 +44,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     } else {
         // If the origin is not allowed, respond with a 403 Forbidden.
+        console.log('Origin not allowed')
         return res.status(403).json({ error: 'Origin not allowed' });
     }
   }
 
   if (req.method !== 'POST') {
+    console.log('Method not allowed')
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!res.hasHeader('Access-Control-Allow-Origin')) {
+    console.log('Forbidden: Origin check failed')
     return res.status(403).json({ error: 'Forbidden: Origin check failed' });
   }
 
