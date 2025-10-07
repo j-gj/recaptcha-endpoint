@@ -13,6 +13,7 @@ function setCorsHeaders(req: VercelRequest, res: VercelResponse) {
   let allowedOrigin: string | null = null;
 
   if (origin) {
+    console.log("origin", origin)
     // 1. Check for exact match against the list
     if (ALLOWED_ORIGINS.includes(origin)) {
       allowedOrigin = origin;
