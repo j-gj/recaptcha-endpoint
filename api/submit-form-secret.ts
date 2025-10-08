@@ -43,6 +43,7 @@ export default async function handler(
     const submissionId = req.headers['framer-webhook-submission-id'] as string;
     
     if (!signature || !submissionId) {
+      console.log('Unauthorized: Missing Framer signature or submission ID')
       return res.status(401).json({ 
         error: 'Unauthorized: Missing Framer signature or submission ID' 
       });
@@ -65,6 +66,7 @@ export default async function handler(
       bodyBuffer, 
       signature
     )) {
+      console.log('Unauthorized: Invalid signature')
       return res.status(401).json({ error: 'Unauthorized: Invalid signature' });
     }
 
@@ -73,6 +75,7 @@ export default async function handler(
 
     // Validate that we have form data
     if (!formData || Object.keys(formData).length === 0) {
+      console.log('No form data provided')
       return res.status(400).json({ error: 'Bad request: No form data provided' });
     }
 
@@ -103,6 +106,7 @@ export default async function handler(
         });
       }
     } else {
+      console.log('Invalid formType')
       return res.status(400).json({ 
         error: `Bad request: Invalid formType "${formData.formType}". Must be "webinar" or "contact"` 
       });
