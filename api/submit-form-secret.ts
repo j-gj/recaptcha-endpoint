@@ -1,4 +1,3 @@
-// api/webhook.ts
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import crypto from 'crypto';
 
@@ -28,6 +27,17 @@ function isWebhookSignatureValid(
   );
 }
 
+// Helper function to get raw body from request
+async function getRawBody(req: VercelRequest): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  
+  return new Promise((resolve, reject) => {
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
@@ -43,14 +53,15 @@ export default async function handler(
     const submissionId = req.headers['framer-webhook-submission-id'] as string;
     
     if (!signature || !submissionId) {
-      console.log('Unauthorized: Missing Framer signature or submission ID')
+      const e = 'Unauthorized: Missing Framer signature or submission ID';
+      console.log(e)
       return res.status(401).json({ 
-        error: 'Unauthorized: Missing Framer signature or submission ID' 
+        error: e 
       });
     }
 
-    // Get the raw body as a buffer
-    const bodyBuffer = Buffer.from(JSON.stringify(req.body));
+    // Get the raw body buffer (before parsing)
+    const bodyBuffer = await getRawBody(req);
 
     // Validate environment variable exists
     if (!process.env.WEBHOOK_SECRET) {
@@ -59,24 +70,26 @@ export default async function handler(
       });
     }
 
-    // Validate the signature
+    // Validate the signature using the raw body buffer
     if (!isWebhookSignatureValid(
       process.env.WEBHOOK_SECRET, 
       submissionId, 
       bodyBuffer, 
       signature
     )) {
-      console.log('Unauthorized: Invalid signature')
-      return res.status(401).json({ error: 'Unauthorized: Invalid signature' });
+      const e = 'Unauthorized: Invalid signature';
+      console.log(e)
+      return res.status(401).json({ error: e });
     }
 
-    // Get the form data from the request body
-    const formData: FormData = req.body;
+    // Now parse the body for processing
+    const formData: FormData = JSON.parse(bodyBuffer.toString('utf8'));
 
     // Validate that we have form data
     if (!formData || Object.keys(formData).length === 0) {
-      console.log('No form data provided')
-      return res.status(400).json({ error: 'Bad request: No form data provided' });
+      const e = 'Bad request: No form data provided';
+      console.log(e)
+      return res.status(400).json({ error: e });
     }
 
     // Check for formType field
@@ -106,7 +119,6 @@ export default async function handler(
         });
       }
     } else {
-      console.log('Invalid formType')
       return res.status(400).json({ 
         error: `Bad request: Invalid formType "${formData.formType}". Must be "webinar" or "contact"` 
       });
@@ -144,3 +156,10 @@ export default async function handler(
     });
   }
 }
+
+// Disable automatic body parsing
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
